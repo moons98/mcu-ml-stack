@@ -1,0 +1,2 @@
+# Instruction cache 32 KB (IDF default: 16 KB; takes the 16 KB IRAM part of SRAM0)
+CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y

@@ -6,6 +6,7 @@ Run inside the ESP-IDF environment:  . ~/esp/esp-idf/export.sh && python bench.p
   python bench.py build                       # {ref,espnn}_{160,240}
   python bench.py build --profile             # + per-op profiling builds (*_prof, +80 KB RAM)
   python bench.py build --wifi                # + wifi-on variants *_wifi (needs cfg/wifi_secrets.defaults)
+  python bench.py build --tune                # + resource-tuning variants espnn_240_{qio,ic32,qio_ic32,all}
   python bench.py run -p /dev/ttyUSB0         # flash each built variant and collect serial RESULT lines
   python bench.py run -p /dev/ttyUSB0 --only ref_160 espnn_240
   --model <name>                              # model in models/<name>/out (default: res_cnn_lstm)
@@ -28,9 +29,17 @@ REPO = HERE.parents[1]
 RESULTS = REPO / "results"
 KERNELS = ("ref", "espnn")
 CPUS = ("160", "240")
+# Resource-tuning variants (--tune), applied to the TUNE_BASE kernel/CPU only.
+TUNE_BASE = ("espnn", "240")
+TUNES = {
+    "qio": ["cfg/qio.defaults"],
+    "ic32": ["cfg/icache32.defaults"],
+    "qio_ic32": ["cfg/qio.defaults", "cfg/icache32.defaults"],
+    "all": ["cfg/qio.defaults", "cfg/icache32.defaults", "cfg/dcache64.defaults"],
+}
 
 
-def variants(with_wifi: bool, with_prof: bool = False):
+def variants(with_wifi: bool, with_prof: bool = False, with_tune: bool = False):
     """Yield (name, [sdkconfig fragments]) applied on top of sdkconfig.defaults.
 
     All variants use the common settings in sdkconfig.defaults (-O2, core 1) and
@@ -38,7 +47,8 @@ def variants(with_wifi: bool, with_prof: bool = False):
       <kernel>_<cpu>        Wi-Fi off
       <kernel>_<cpu>_prof   + MicroProfiler   (--profile)
       <kernel>_<cpu>_wifi   Wi-Fi STA connected (--wifi)
-    cfg/tuned.defaults (resource tuning) is not applied to any variant for now.
+      espnn_240_<tune>      resource tuning on top of the default resources (--tune, see TUNES;
+                            with --profile also espnn_240_<tune>_prof)
     """
     for k, c in itertools.product(KERNELS, CPUS):
         base = [f"cfg/{k}.defaults", f"cfg/cpu{c}.defaults"]
@@ -47,6 +57,11 @@ def variants(with_wifi: bool, with_prof: bool = False):
             yield f"{k}_{c}_prof", base + ["cfg/wifi_off.defaults", "cfg/prof.defaults"]
         if with_wifi:
             yield f"{k}_{c}_wifi", base + ["cfg/wifi_on.defaults", "cfg/wifi_secrets.defaults"]
+        if with_tune and (k, c) == TUNE_BASE:
+            for t, frags in TUNES.items():
+                yield f"{k}_{c}_{t}", base + ["cfg/wifi_off.defaults"] + frags
+                if with_prof:
+                    yield f"{k}_{c}_{t}_prof", base + ["cfg/wifi_off.defaults"] + frags + ["cfg/prof.defaults"]
 
 
 def idf(args, build_dir: Path, defaults, model: str):
@@ -73,7 +88,7 @@ def cmd_build(a):
         sys.exit("cfg/wifi_secrets.defaults not found. Create it with:\n  CONFIG_BENCH_WIFI_SSID=\"...\"\n  CONFIG_BENCH_WIFI_PASSWORD=\"...\"")
     if not (REPO / "models" / a.model / "out/model_data.cc").exists():
         sys.exit(f"models/{a.model}/out/model_data.cc not found; run models/{a.model}/export.py first")
-    for name, defaults in variants(a.wifi, a.profile):
+    for name, defaults in variants(a.wifi, a.profile, a.tune):
         if a.only and name not in a.only:
             continue
         bd = HERE / "build" / a.model / name
@@ -122,7 +137,7 @@ def cmd_run(a):
     out_dir.mkdir(parents=True, exist_ok=True)
     ts = time.strftime("%Y%m%d_%H%M%S")
     rows = []
-    for name, defaults in variants(True, True):
+    for name, defaults in variants(True, True, True):
         bd = HERE / "build" / a.model / name
         if a.only and name not in a.only:
             continue
@@ -157,6 +172,7 @@ def main():
     b.add_argument("--clean", action="store_true")
     b.add_argument("--profile", action="store_true", help="also build per-op profiling variants (*_prof)")
     b.add_argument("--only", nargs="*", help="build only these variant names")
+    b.add_argument("--tune", action="store_true", help="also build resource-tuning variants (espnn_240_*)")
     r = sub.add_parser("run")
     r.add_argument("-p", "--port", required=True)
     r.add_argument("--only", nargs="*")
