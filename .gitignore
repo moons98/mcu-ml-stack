@@ -8,6 +8,7 @@ models/*/out/
 
 # Experiment outputs
 experiments/*/runs/
+results/
 
 # ESP-IDF build outputs
 firmware/*/build/
