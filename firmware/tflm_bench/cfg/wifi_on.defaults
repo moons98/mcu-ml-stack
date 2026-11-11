@@ -1,0 +1,2 @@
+CONFIG_BENCH_WIFI=y
+# SSID/PASSWORD go in cfg/wifi_secrets.defaults (git-ignored)
