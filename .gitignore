@@ -1,7 +1,6 @@
 # Source material (size / copyright)
 data/
 pdfs/
-docs/
 
 # Model export outputs (regenerate with models/<name>/export.py)
 models/*/out/
