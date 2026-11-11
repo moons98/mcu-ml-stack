@@ -1,0 +1,26 @@
+# Source material (size / copyright)
+data/
+pdfs/
+docs/
+
+# Model export outputs (regenerate with models/<name>/export.py)
+models/*/out/
+
+# Experiment outputs
+experiments/*/runs/
+
+# ESP-IDF build outputs
+firmware/*/build/
+firmware/*/managed_components/
+firmware/*/sdkconfig
+firmware/*/sdkconfig.old
+firmware/*/cfg/wifi_secrets.defaults
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
