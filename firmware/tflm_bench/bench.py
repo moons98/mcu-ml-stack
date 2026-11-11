@@ -3,11 +3,11 @@
 
 Run inside the ESP-IDF environment:  . ~/esp/esp-idf/export.sh && python bench.py ...
 
-  python bench.py build                       # bare_{ref,espnn} + tuned_{ref,espnn}_{160,240}_off
+  python bench.py build                       # {ref,espnn}_{160,240}
   python bench.py build --profile             # + per-op profiling builds (*_prof, +80 KB RAM)
-  python bench.py build --wifi                # + wifi-on variants (needs cfg/wifi_secrets.defaults)
+  python bench.py build --wifi                # + wifi-on variants *_wifi (needs cfg/wifi_secrets.defaults)
   python bench.py run -p /dev/ttyUSB0         # flash each built variant and collect serial RESULT lines
-  python bench.py run -p /dev/ttyUSB0 --only bare_ref tuned_ref_240_off
+  python bench.py run -p /dev/ttyUSB0 --only ref_160 espnn_240
   --model <name>                              # model in models/<name>/out (default: res_cnn_lstm)
 
 Builds:  build/<model>/<variant>/
@@ -33,18 +33,20 @@ CPUS = ("160", "240")
 def variants(with_wifi: bool, with_prof: bool = False):
     """Yield (name, [sdkconfig fragments]) applied on top of sdkconfig.defaults.
 
-    bare_<kernel>             : ESP-IDF defaults (160 MHz, -Og, 2 MB DIO flash, ...) + kernel choice
-    tuned_<kernel>_<cpu>_<wifi>: cfg/tuned.defaults (-O2, 16 MB QIO flash, ...) + axes
+    All variants use the common settings in sdkconfig.defaults (-O2, core 1) and
+    otherwise ESP-IDF default resources. Axes: kernel x CPU clock.
+      <kernel>_<cpu>        Wi-Fi off
+      <kernel>_<cpu>_prof   + MicroProfiler   (--profile)
+      <kernel>_<cpu>_wifi   Wi-Fi STA connected (--wifi)
+    cfg/tuned.defaults (resource tuning) is not applied to any variant for now.
     """
-    for k in KERNELS:
-        yield f"bare_{k}", [f"cfg/{k}.defaults"]
-    wifis = ("off", "on") if with_wifi else ("off",)
-    for k, c, w in itertools.product(KERNELS, CPUS, wifis):
-        base = ["cfg/tuned.defaults", f"cfg/{k}.defaults", f"cfg/cpu{c}.defaults", f"cfg/wifi_{w}.defaults"] + \
-            (["cfg/wifi_secrets.defaults"] if w == "on" else [])
-        yield f"tuned_{k}_{c}_{w}", base
-        if with_prof and w == "off":
-            yield f"tuned_{k}_{c}_{w}_prof", base + ["cfg/prof.defaults"]
+    for k, c in itertools.product(KERNELS, CPUS):
+        base = [f"cfg/{k}.defaults", f"cfg/cpu{c}.defaults"]
+        yield f"{k}_{c}", base + ["cfg/wifi_off.defaults"]
+        if with_prof:
+            yield f"{k}_{c}_prof", base + ["cfg/wifi_off.defaults", "cfg/prof.defaults"]
+        if with_wifi:
+            yield f"{k}_{c}_wifi", base + ["cfg/wifi_on.defaults", "cfg/wifi_secrets.defaults"]
 
 
 def idf(args, build_dir: Path, defaults, model: str):
@@ -72,9 +74,14 @@ def cmd_build(a):
     if not (REPO / "models" / a.model / "out/model_data.cc").exists():
         sys.exit(f"models/{a.model}/out/model_data.cc not found; run models/{a.model}/export.py first")
     for name, defaults in variants(a.wifi, a.profile):
+        if a.only and name not in a.only:
+            continue
         bd = HERE / "build" / a.model / name
         if a.clean and bd.exists():
             subprocess.run(["rm", "-rf", str(bd)])
+        # An existing sdkconfig takes precedence over SDKCONFIG_DEFAULTS, so edits to
+        # sdkconfig.defaults / cfg/*.defaults would be silently ignored. Regenerate it.
+        (bd / "sdkconfig").unlink(missing_ok=True)
         t0 = time.time()
         r = idf(["build"], bd, defaults, a.model)
         ok = r.returncode == 0
@@ -149,6 +156,7 @@ def main():
     b.add_argument("--wifi", action="store_true")
     b.add_argument("--clean", action="store_true")
     b.add_argument("--profile", action="store_true", help="also build per-op profiling variants (*_prof)")
+    b.add_argument("--only", nargs="*", help="build only these variant names")
     r = sub.add_parser("run")
     r.add_argument("-p", "--port", required=True)
     r.add_argument("--only", nargs="*")
