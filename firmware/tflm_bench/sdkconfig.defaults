@@ -1,0 +1,5 @@
+# Target only. Everything else stays at the ESP-IDF default, so a plain
+# `idf.py build` (and the "bare" bench variants) measure the out-of-the-box setup:
+#   flash 2 MB DIO 80 MHz, PSRAM off, CPU 160 MHz, -Og, ICache 16 KB / DCache 32 KB.
+# Tuned settings live in cfg/tuned.defaults.
+CONFIG_IDF_TARGET="esp32s3"

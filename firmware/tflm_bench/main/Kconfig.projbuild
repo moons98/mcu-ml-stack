@@ -1,0 +1,33 @@
+menu "TFLM bench"
+
+config BENCH_WIFI
+    bool "Measure with Wi-Fi STA connected to an AP"
+    default n
+
+config BENCH_WIFI_SSID
+    string "Wi-Fi SSID"
+    depends on BENCH_WIFI
+    default ""
+
+config BENCH_WIFI_PASSWORD
+    string "Wi-Fi password"
+    depends on BENCH_WIFI
+    default ""
+
+config BENCH_PROFILE
+    bool "Print per-op ticks via TFLM MicroProfiler (+~80 KB RAM, adds overhead)"
+    default n
+
+config BENCH_RUNS
+    int "Number of timed runs"
+    default 1000
+
+config BENCH_WARMUP
+    int "Number of warm-up runs"
+    default 20
+
+config BENCH_ARENA_KB
+    int "Tensor arena size (KB, internal SRAM)"
+    default 64
+
+endmenu
