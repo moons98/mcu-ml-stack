@@ -1,5 +1,15 @@
-# Target only. Everything else stays at the ESP-IDF default, so a plain
-# `idf.py build` (and the "bare" bench variants) measure the out-of-the-box setup:
-#   flash 2 MB DIO 80 MHz, PSRAM off, CPU 160 MHz, -Og, ICache 16 KB / DCache 32 KB.
-# Tuned settings live in cfg/tuned.defaults.
+# Common to every variant: target, compiler optimization level and main-task core.
+# All runtime/system resources stay at the ESP-IDF defaults:
+#   flash 2 MB DIO 80 MHz, PSRAM off, CPU 160 MHz (cfg/cpu*.defaults override it),
+#   ICache 16 KB / DCache 32 KB, task watchdog on, main task stack 3.5 KB.
+# Resource tuning lives in cfg/tuned.defaults (not applied to any variant yet).
 CONFIG_IDF_TARGET="esp32s3"
+
+# -O2 for app/IDF code (IDF default is -Og). Note: esp-tflite-micro and esp-nn
+# compile their own sources with -O3 regardless of this setting.
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# Run app_main (the benchmark) on core 1. The IDF default is core 0, which is also
+# where the Wi-Fi and esp_timer tasks are pinned; core 1 matches the Arduino-ESP32
+# layout (loop() on core 1, Wi-Fi on core 0).
+CONFIG_ESP_MAIN_TASK_AFFINITY_CPU1=y

@@ -1,13 +1,11 @@
-# Tuned system settings for ESP32-S3-DevKitC-1 N16R8 (applied on top of sdkconfig.defaults)
+# Tuned runtime/system resource settings for ESP32-S3-DevKitC-1 N16R8
+# (applied on top of sdkconfig.defaults; compiler settings are common and live there)
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
 CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
 
 # PSRAM disabled so the tensor arena always lives in internal SRAM
 # CONFIG_SPIRAM is not set
-
-# -O2 (the IDF default is -Og for debugging)
-CONFIG_COMPILER_OPTIMIZATION_PERF=y
 
 # Minimize interference during measurement
 CONFIG_ESP_TASK_WDT_EN=n

@@ -167,8 +167,8 @@ extern "C" void app_main(void) {
   printf("CFG,opt=%s,flash_mode=%s,flash_freq=%s,psram=%d,icache_kb=%d,dcache_kb=%d,dcache_line=%d\n", kOpt,
          kFlashMode, CONFIG_ESPTOOLPY_FLASHFREQ, kPsram, CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE / 1024,
          CONFIG_ESP32S3_DATA_CACHE_SIZE / 1024, CONFIG_ESP32S3_DATA_CACHE_LINE_SIZE);
-  printf("CFG,model=%s,kernel=%s,cpu_mhz=%d,wifi=%s,wifi_connected=%d,model_bytes=%u,arena_kb=%d,runs=%d,profile=%d\n",
-         BENCH_MODEL_NAME, kKernel, (int)(esp_clk_cpu_freq() / 1000000),
+  printf("CFG,model=%s,kernel=%s,cpu_mhz=%d,core=%d,wifi=%s,wifi_connected=%d,model_bytes=%u,arena_kb=%d,runs=%d,profile=%d\n",
+         BENCH_MODEL_NAME, kKernel, (int)(esp_clk_cpu_freq() / 1000000), (int)xPortGetCoreID(),
 #if CONFIG_BENCH_WIFI
          "on",
 #else
